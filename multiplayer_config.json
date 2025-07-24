@@ -1,0 +1,43 @@
+{
+    "server": {
+        "default_host": "0.0.0.0",
+        "default_port": 55000,
+        "max_players": 4,
+        "simulation_fps": 60,
+        "broadcast_fps": 30,
+        "timeout_seconds": 30
+    },
+    "client": {
+        "default_server_ip": "127.0.0.1",
+        "default_server_port": 55000,
+        "input_rate_fps": 20,
+        "reconnect_attempts": 3,
+        "connection_timeout": 5.0
+    },
+    "game": {
+        "level_file": "levels/level1.json",
+        "spawn_positions": [
+            [13, 26],
+            [13, 8],
+            [26, 13],
+            [8, 13]
+        ],
+        "ghost_frightened_duration": 10000,
+        "ghost_mode_duration": 7000,
+        "power_pellet_duration": 10000
+    },
+    "ui": {
+        "screen_width": 800,
+        "screen_height": 600,
+        "fps": 60,
+        "font_size": 24,
+        "show_debug_info": false
+    },
+    "audio": {
+        "enable_sounds": true,
+        "enable_music": true,
+        "master_volume": 0.7,
+        "sfx_volume": 0.8,
+        "music_volume": 0.6
+    }
+}

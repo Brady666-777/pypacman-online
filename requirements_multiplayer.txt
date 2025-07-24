@@ -1,0 +1,8 @@
+# PyPacman Multiplayer Requirements
+
+# Core game dependencies
+pygame>=2.0.0
+pygame-menu>=4.0.0
+
+# Note: The following modules are built-in to Python and don't need to be installed:
+# asyncio, json, threading, socket, time, uuid, collections, math, random, os, sys, typing
