@@ -51,7 +51,6 @@ class GameSimulator:
         self.ghost_mode_duration = 7000  # 7 seconds
         self.frightened_timer = 0
         self.frightened_duration = 10000  # 10 seconds
-        self.shared_object_cooldown = 10000  # 10 seconds before respawn
         
     def load_level(self):
         """Load the game level from JSON file"""
@@ -178,8 +177,6 @@ class GameSimulator:
         
         if action_type == 'move':
             self.handle_player_move(action)
-        elif action_type == 'use_shared_object':
-            self.handle_shared_object_use(action)
     
     def handle_player_move(self, action: Dict[str, Any]):
         """Handle player movement"""

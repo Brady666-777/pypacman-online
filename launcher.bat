@@ -7,7 +7,7 @@ echo.
 echo 1. Start Multiplayer Client (Host/Join Game)
 echo 2. Start Dedicated Server
 echo 3. Run Original Single Player Game
-echo 4. Test Multiplayer Functionality
+echo 4. Run Local Test (Host and Join on Same Computer)
 echo 5. Exit
 echo.
 set /p choice="Enter your choice (1-5): "
@@ -34,9 +34,13 @@ python main.py
 goto menu
 
 :test
-echo Running Multiplayer Tests...
-python test_multiplayer.py
-pause
+echo Running Local Test (Server + Client on same computer)...
+echo.
+echo Starting server in background...
+start /b python server/main_server.py
+timeout /t 3 /nobreak >nul
+echo Starting client (use 127.0.0.1 and port 55000)...
+python main_multiplayer.py
 goto menu
 
 :menu

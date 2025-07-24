@@ -8,8 +8,8 @@
         "timeout_seconds": 30
     },
     "client": {
-        "default_server_ip": "127.0.0.1",
-        "default_server_port": 55000,
+        "default_server_ip": "192.168.0.167",
+        "default_server_port": 7885,
         "input_rate_fps": 20,
         "reconnect_attempts": 3,
         "connection_timeout": 5.0

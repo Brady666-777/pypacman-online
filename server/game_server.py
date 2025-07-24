@@ -285,7 +285,7 @@ class GameServer:
 
 
 if __name__ == "__main__":
-    server = GameServer(max_players=4)
+    server = GameServer(max_players=4, host="0.0.0.0", port=55000)
     try:
         server.start_server()
     except KeyboardInterrupt:

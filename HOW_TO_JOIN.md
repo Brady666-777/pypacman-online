@@ -4,10 +4,20 @@
 
 ### Step 1: Start the Server
 
-First, someone needs to run the game server:
+First, someone needs to run the game server. You have three options:
 
+**Option 1 - Easy startup (Recommended):**
 ```bash
-# In the PyPacman directory
+python start_server.py
+```
+
+**Option 2 - Using main server:**
+```bash
+python server/main_server.py
+```
+
+**Option 3 - Direct server:**
+```bash
 python server/game_server.py
 ```
 
@@ -44,10 +54,10 @@ python client/multiplayer_client.py
 
 ## Game Controls
 
-| Key   | Action      |
-| ----- | ----------- |
-| ↑↓←→  | Move Pacman |
-| ESC   | Leave game  |
+| Key  | Action      |
+| ---- | ----------- |
+| ↑↓←→ | Move Pacman |
+| ESC  | Leave game  |
 
 ## Game Features
 
@@ -73,12 +83,31 @@ The multiplayer PyPacman game allows multiple players to compete in the classic 
 
 ## Troubleshooting
 
+### ❌ "Connection refused" Error (WinError 10061)
+
+This means no server is running on the specified port. To fix:
+
+1. **Make sure the server is actually running**:
+   ```bash
+   python start_server.py
+   ```
+   You should see: "PyPacman Server started on 0.0.0.0:55000"
+
+2. **Check if the server started successfully**:
+   - Look for error messages in the server terminal
+   - Make sure port 55000 isn't being used by another program
+
+3. **Verify the port**:
+   - Server should show it's running on port 55000
+   - Client should connect to port 55000
+
 ### Cannot Connect to Server
 
-1. Make sure the server is running
-2. Check the IP address and port number
-3. Verify firewall settings
-4. Try using `127.0.0.1` for local games
+1. **Verify server is running** and shows "Server started on 0.0.0.0:55000"
+2. **Check the IP address and port number** in the client
+3. **For local games**: Use `127.0.0.1` and port `55000`
+4. **For network games**: Use the server computer's IP address
+5. **Check firewall settings** - port 55000 must be allowed
 
 ### Game Not Starting
 
@@ -94,9 +123,9 @@ The multiplayer PyPacman game allows multiple players to compete in the classic 
 
 ## Example Session
 
-```
+```bash
 # Terminal 1: Start server
-python server/game_server.py
+python start_server.py
 
 # Terminal 2: Start client 1
 python client/multiplayer_client.py

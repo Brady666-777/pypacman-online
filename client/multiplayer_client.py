@@ -34,8 +34,8 @@ class MultiplayerClient:
         
         # Network settings
         self.server_socket: Optional[socket.socket] = None
-        self.server_ip = "127.0.0.1"
-        self.server_port = 55000
+        self.server_ip = "127.0.0.1"  # Default to localhost
+        self.server_port = 55000  # Default server port
         self.player_id: Optional[str] = None
         self.player_name = ""
         
@@ -83,6 +83,8 @@ class MultiplayerClient:
         self.ip_input = self.join_menu.add.text_input('Server IP: ', default='127.0.0.1')
         self.port_input = self.join_menu.add.text_input('Port: ', default='55000')
         self.join_menu.add.button('Join', self.join_game)
+        self.join_menu.add.button('Join Local (127.0.0.1)', self.join_localhost)
+        self.join_menu.add.button('Join Network (192.168.0.167)', self.join_network)
         self.join_menu.add.button('Back', self.show_main_menu)
         
         # Lobby menu
@@ -150,6 +152,32 @@ class MultiplayerClient:
         except ValueError:
             print("Invalid port number")
             return
+        
+        if self.connect_to_server():
+            self.current_menu = "lobby"
+    
+    def join_localhost(self):
+        """Quick join to localhost server"""
+        self.player_name = self.name_input.get_value()
+        self.server_ip = "127.0.0.1"
+        self.server_port = 55000
+        
+        # Update inputs to show what we're connecting to
+        self.ip_input.set_value("127.0.0.1")
+        self.port_input.set_value("55000")
+        
+        if self.connect_to_server():
+            self.current_menu = "lobby"
+    
+    def join_network(self):
+        """Quick join to network server"""
+        self.player_name = self.name_input.get_value()
+        self.server_ip = "192.168.0.167"
+        self.server_port = 55000
+        
+        # Update inputs to show what we're connecting to
+        self.ip_input.set_value("192.168.0.167")
+        self.port_input.set_value("55000")
         
         if self.connect_to_server():
             self.current_menu = "lobby"
