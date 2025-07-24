@@ -50,6 +50,9 @@ class MultiplayerGameRunner:
         # Initialize game objects
         self.setup_game_objects()
         
+        # Create local player immediately
+        self.setup_local_player()
+        
         # Sounds
         self.sound_manager = SoundManager()
         self.initialize_sounds()
@@ -64,10 +67,26 @@ class MultiplayerGameRunner:
             with open('levels/level1.json', 'r') as f:
                 level_data = json.load(f)
                 self.matrix = level_data['matrix']
-                self.start_pos = (level_data.get('cell_width', 20), level_data.get('cell_height', 20))
+                # Calculate grid positioning (like single-player version)
+                from src.utils.coord_utils import place_elements_offset
+                from src.configs import SCREEN_WIDTH, SCREEN_HEIGHT, CELL_SIZE
+                
+                num_rows = level_data.get('num_rows', 32)
+                num_cols = level_data.get('num_cols', 35)
+                
+                self.start_x, self.start_y = place_elements_offset(
+                    SCREEN_WIDTH,
+                    SCREEN_HEIGHT,
+                    CELL_SIZE[0] * num_cols,
+                    CELL_SIZE[0] * num_rows,
+                    0.5,
+                    0.5,
+                )
+                
                 self.pacman_start_pos = tuple(level_data.get('pacman_start', [17, 16]))
                 
                 # Extract ghost positions from level data or use defaults
+                self.ghost_den = tuple(level_data.get('ghost_den', [14, 15]))
                 self.ghost_positions = {
                     'blinky': tuple(level_data.get('ghost_den', [14, 15])),
                     'pinky': (level_data.get('ghost_den', [14, 15])[0], level_data.get('ghost_den', [14, 15])[1] + 1),
@@ -76,27 +95,51 @@ class MultiplayerGameRunner:
                 }
         except Exception as e:
             print(f"Failed to load level: {e}")
-            # Create minimal level
+            # Create minimal level with proper grid positioning
+            from src.utils.coord_utils import place_elements_offset
+            from src.configs import SCREEN_WIDTH, SCREEN_HEIGHT, CELL_SIZE
+            
             self.matrix = [['wall'] * 35 for _ in range(35)]
-            self.start_pos = (20, 20)
+            
+            num_rows, num_cols = 32, 35
+            self.start_x, self.start_y = place_elements_offset(
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                CELL_SIZE[0] * num_cols,
+                CELL_SIZE[0] * num_rows,
+                0.5,
+                0.5,
+            )
+            
             self.pacman_start_pos = (17, 16)
+            self.ghost_den = (14, 15)
             self.ghost_positions = {'blinky': (14, 15), 'pinky': (14, 16), 'inky': (13, 15), 'clyde': (15, 15)}
     
     def setup_game_objects(self):
         """Initialize game objects"""
-        # Create ghost manager
+        # Create ghost manager with correct parameters
         self.ghost_manager = GhostManager(
             self.screen,
             self.game_state,
             self.matrix,
-            self.start_pos,
-            self.ghost_positions
+            self.ghost_den,  # ghost_matrix_pos: single position where ghosts start
+            (self.start_x, self.start_y)  # grid_start_pos: grid positioning coordinates
         )
         
         # Add ghosts to sprite groups
-        for ghost in self.ghost_manager.ghosts:
+        for ghost in self.ghost_manager.ghosts_list:
             self.ghost_sprites.add(ghost)
             self.all_sprites.add(ghost)
+    
+    def setup_local_player(self):
+        """Setup the local player"""
+        if self.client.player_id and self.client.player_id not in self.multiplayer_players:
+            # Create local player at the default starting position
+            pacman = self.create_player_pacman(self.client.player_id, self.pacman_start_pos)
+            self.multiplayer_players[self.client.player_id] = pacman
+            self.pacman_sprites.add(pacman)
+            self.all_sprites.add(pacman)
+            print(f"Local player created: {self.client.player_id}")
     
     def initialize_sounds(self):
         """Initialize sound effects"""
@@ -116,7 +159,7 @@ class MultiplayerGameRunner:
             self.game_state,
             self.matrix,
             position,
-            self.start_pos
+            (self.start_x, self.start_y)  # Use the correct grid start position
         )
         
         # Customize appearance for different players
@@ -129,6 +172,16 @@ class MultiplayerGameRunner:
         # You could modify colors, add name tags, etc.
         # For now, we'll just store the player ID
         pacman.player_id = player_id
+    
+    def convert_direction_to_pacman_format(self, direction: str) -> str:
+        """Convert full direction words to Pacman's single-letter format"""
+        direction_map = {
+            "left": "l",
+            "right": "r", 
+            "up": "u",
+            "down": "d"
+        }
+        return direction_map.get(direction, "r")  # Default to right if unknown
     
     def update_from_server_state(self, server_state: Dict[str, Any]):
         """Update game state from server"""
@@ -148,7 +201,9 @@ class MultiplayerGameRunner:
                 # Update existing player
                 pacman = self.multiplayer_players[player_id]
                 pacman.pacman_pos = player_data['position']
-                pacman.move_direction = player_data.get('direction', 'right')
+                # Convert direction from server format to Pacman's single-letter format
+                server_direction = player_data.get('direction', 'right')
+                pacman.move_direction = self.convert_direction_to_pacman_format(server_direction)
                 
                 # Update score in game state
                 if player_id == self.client.player_id:
@@ -156,7 +211,13 @@ class MultiplayerGameRunner:
         
         # Update ghost positions
         for ghost_name, ghost_data in ghosts.items():
-            ghost = self.ghost_manager.get_ghost_by_name(ghost_name)
+            # Find ghost by name in the ghosts_list
+            ghost = None
+            for g in self.ghost_manager.ghosts_list:
+                if g.name == ghost_name:
+                    ghost = g
+                    break
+                    
             if ghost:
                 ghost._ghost_matrix_pos = ghost_data['position']
                 ghost._direction = ghost_data.get('direction', 'up')
@@ -181,13 +242,28 @@ class MultiplayerGameRunner:
             elif event.key == pygame.K_RIGHT:
                 direction = "right"
             
-            if direction and self.client.player_id in self.multiplayer_players:
-                # Get current position
-                pacman = self.multiplayer_players[self.client.player_id]
-                current_pos = pacman.pacman_pos
+            if direction:
+                # Create local player if it doesn't exist yet
+                if self.client.player_id and self.client.player_id not in self.multiplayer_players:
+                    self.setup_local_player()
                 
-                # Send to server
-                self.client.send_player_input(direction, current_pos)
+                # Apply movement locally for immediate feedback
+                if self.client.player_id in self.multiplayer_players:
+                    pacman = self.multiplayer_players[self.client.player_id]
+                    current_pos = pacman.pacman_pos
+                    
+                    # Update local direction immediately for responsive gameplay
+                    pacman_direction = self.convert_direction_to_pacman_format(direction)
+                    pacman.move_direction = pacman_direction
+                    
+                    # Also update the game state direction for consistency
+                    self.game_state.direction = pacman_direction
+                    
+                    # Send to server
+                    self.client.send_player_input(direction, current_pos)
+                    print(f"Sent input: {direction} at position {current_pos}")
+                else:
+                    print(f"Player not found: {self.client.player_id}, available players: {list(self.multiplayer_players.keys())}")
     
     def update(self, dt: float):
         """Update game logic"""
@@ -195,11 +271,8 @@ class MultiplayerGameRunner:
         if self.client.multiplayer_game_state:
             self.update_from_server_state(self.client.multiplayer_game_state)
         
-        # Update sprites
+        # Update sprites (this will update all ghosts and pacman sprites)
         self.all_sprites.update(dt)
-        
-        # Update ghost manager
-        self.ghost_manager.update()
     
     def draw(self):
         """Draw game objects"""
@@ -252,6 +325,10 @@ class MultiplayerGameRunner:
     def run_game_loop(self):
         """Run the main game loop"""
         clock = pygame.time.Clock()
+        
+        # Ensure local player exists when game starts
+        if self.client.player_id and self.client.player_id not in self.multiplayer_players:
+            self.setup_local_player()
         
         while self.client.running and self.client.current_menu == "game":
             # Handle events
